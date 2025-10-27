@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4G KPI Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .nav-tabs a {
+            padding: 12px 30px;
+            background: #f0f0f0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs a:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .nav-tabs a.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .filter-section label {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .filter-section select {
+            flex: 1;
+            max-width: 300px;
+            padding: 12px 20px;
+            border: 2px solid #f093fb;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .filter-section select:hover {
+            border-color: #f5576c;
+            box-shadow: 0 3px 10px rgba(240, 147, 251, 0.3);
+        }
+
+        .filter-section select:focus {
+            outline: none;
+            border-color: #f5576c;
+            box-shadow: 0 0 0 3px rgba(240, 147, 251, 0.2);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+        }
+
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f093fb;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .error {
+            background: #ff4757;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.3);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(240, 147, 251, 0.4);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .stats-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-container p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-section select {
+                max-width: 100%;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 4G KPI Dashboard</h1>
+            <p style="color: #666; margin-top: 10px;">4G Network Performance Monitoring</p>
+            <div class="nav-tabs">
+                <a href="dashboard.html">5G KPI</a>
+                <a href="dashboard_4g.html" class="active">4G KPI</a>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <label for="ncSelector">🔍 Select Network Cluster (NC):</label>
+            <select id="ncSelector">
+                <option value="All">Loading...</option>
+            </select>
+            <button class="refresh-btn" onclick="loadAllCharts()">🔄 Refresh Data</button>
+        </div>
+
+        <div id="error-container"></div>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <div class="dashboard-grid" style="display: none;" id="dashboard">
+            <!-- Row 1 -->
+            <div class="chart-container">
+                <h3>📈 Availability (%)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="availabilityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>🎯 Accessibility (S1 Failure)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="accessibilityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="chart-container">
+                <h3>👥 RRC Conn User</h3>
+                <div class="chart-wrapper">
+                    <canvas id="rrcUserChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>💾 Traffic 4G (GB)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="trafficChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="chart-container">
+                <h3>📊 EUT vs #Cells_EUT < 3.1mbps</h3>
+                <div class="chart-wrapper">
+                    <canvas id="eutChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>📡 DL PRB Utilization vs DL PRB Util > 90%</h3>
+                <div class="chart-wrapper">
+                    <canvas id="dlPrbUtilChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 4 -->
+            <div class="chart-container">
+                <h3>📶 CQI vs #Cells_CQI < 7</h3>
+                <div class="chart-wrapper">
+                    <canvas id="cqiChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>👤 User IOH vs IM3</h3>
+                <div class="chart-wrapper">
+                    <canvas id="userChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 5 -->
+            <div class="chart-container">
+                <h3>🔄 Traffic 4G-5G</h3>
+                <div class="chart-wrapper">
+                    <canvas id="traffic4g5gChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>📊 Traffic 4G vs 5G (%)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="trafficPercentChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container" style="display: none;" id="stats">
+            <p>Last updated: <span id="lastUpdate"></span> | Data range: Last 35 days</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        // Chart instances
+        let charts = {};
+
+        // Color schemes for 4G
+        const colors = {
+            primary: 'rgba(240, 147, 251, 1)',
+            primaryLight: 'rgba(240, 147, 251, 0.5)',
+            secondary: 'rgba(245, 87, 108, 1)',
+            secondaryLight: 'rgba(245, 87, 108, 0.5)',
+            success: 'rgba(46, 213, 115, 1)',
+            successLight: 'rgba(46, 213, 115, 0.5)',
+            warning: 'rgba(255, 159, 64, 1)',
+            warningLight: 'rgba(255, 159, 64, 0.5)',
+            danger: 'rgba(255, 71, 87, 1)',
+            dangerLight: 'rgba(255, 71, 87, 0.5)',
+            info: 'rgba(26, 188, 156, 1)',
+            infoLight: 'rgba(26, 188, 156, 0.5)',
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNCList();
+            document.getElementById('ncSelector').addEventListener('change', loadAllCharts);
+        });
+
+        // Load NC list for dropdown
+        async function loadNCList() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/nc-list`);
+                const data = await response.json();
+                
+                const selector = document.getElementById('ncSelector');
+                selector.innerHTML = '';
+                
+                data.nc_list.forEach(nc => {
+                    const option = document.createElement('option');
+                    option.value = nc;
+                    option.textContent = nc;
+                    selector.appendChild(option);
+                });
+                
+                loadAllCharts();
+            } catch (error) {
+                showError('Failed to load NC list: ' + error.message);
+            }
+        }
+
+        // Load all charts
+        async function loadAllCharts() {
+            const nc = document.getElementById('ncSelector').value;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('error-container').innerHTML = '';
+
+            try {
+                await Promise.all([
+                    loadChart('4g-availability', 'availabilityChart', 'Availability (%)', colors.primary, colors.primaryLight),
+                    loadChart('4g-accessibility', 'accessibilityChart', 'S1 Failure', colors.secondary, colors.secondaryLight),
+                    loadChart('4g-rrc-user', 'rrcUserChart', 'RRC Conn User', colors.success, colors.successLight),
+                    loadChart('4g-traffic', 'trafficChart', 'Traffic 4G (GB)', colors.warning, colors.warningLight),
+                    loadEutChart(nc),
+                    loadDlPrbUtilChart(nc),
+                    loadCqiChart(nc),
+                    loadUserChart(nc),
+                    loadTraffic4g5gChart(nc),
+                    loadTrafficPercentChart(nc),
+                ]);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'grid';
+                document.getElementById('stats').style.display = 'block';
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+            } catch (error) {
+                showError('Failed to load charts: ' + error.message);
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Generic chart loader
+        async function loadChart(endpoint, canvasId, label, borderColor, backgroundColor) {
+            const nc = document.getElementById('ncSelector').value;
+            const response = await fetch(`${API_BASE_URL}/${endpoint}?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [{
+                    label: label,
+                    data: result.data.map(d => d.value),
+                    borderColor: borderColor,
+                    backgroundColor: backgroundColor,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            };
+
+            createOrUpdateChart(canvasId, chartData);
+        }
+
+        // EUT Chart (dual dataset)
+        async function loadEutChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-eut?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'EUT Behavior',
+                        data: result.data.map(d => d.eut_value),
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primaryLight,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'EUT less 31',
+                        data: result.data.map(d => d.eut_less_31),
+                        backgroundColor: colors.warning,
+                        borderColor: colors.warning,
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        type: 'bar'
+                    }
+                ]
+            };
+
+            createOrUpdateChart('eutChart', chartData, true);
+        }
+
+        // DL PRB Util Chart (dual dataset)
+        async function loadDlPrbUtilChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-dl-prb-util?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'DL PRB Utilization (%)',
+                        data: result.data.map(d => d.util_value),
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primaryLight,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        type: 'line'
+                    },
+                    {
+                        label: 'PRB > 0.9 (Count)',
+                        data: result.data.map(d => d.count_value),
+                        backgroundColor: colors.warning,
+                        borderColor: colors.warning,
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        type: 'bar'
+                    }
+                ]
+            };
+
+            createOrUpdateChart('dlPrbUtilChart', chartData, true);
+        }
+
+        // CQI Chart (dual dataset)
+        async function loadCqiChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-cqi?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'CQI Behavior',
+                        data: result.data.map(d => d.cqi_value),
+                        borderColor: colors.info,
+                        backgroundColor: colors.infoLight,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'CQI < 7',
+                        data: result.data.map(d => d.cqi_less_7),
+                        backgroundColor: colors.danger,
+                        borderColor: colors.danger,
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        type: 'bar'
+                    }
+                ]
+            };
+
+            createOrUpdateChart('cqiChart', chartData, true);
+        }
+
+        // User Chart (dual dataset)
+        async function loadUserChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-user?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'User IOH',
+                        data: result.data.map(d => d.user_ioh),
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primaryLight,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                    },
+                    {
+                        label: 'User IM3',
+                        data: result.data.map(d => d.user_im3),
+                        borderColor: colors.secondary,
+                        backgroundColor: colors.secondaryLight,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                    }
+                ]
+            };
+
+            createOrUpdateChart('userChart', chartData);
+        }
+
+        // Traffic 4G-5G Chart (dual dataset - bar)
+        async function loadTraffic4g5gChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-traffic-comparison?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'Traffic 4G',
+                        data: result.data.map(d => d.traffic_4g),
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                        borderWidth: 1,
+                    },
+                    {
+                        label: 'Traffic 5G',
+                        data: result.data.map(d => d.traffic_5g),
+                        backgroundColor: colors.secondary,
+                        borderColor: colors.secondary,
+                        borderWidth: 1,
+                    }
+                ]
+            };
+
+            createOrUpdateChart('traffic4g5gChart', chartData, false, 'bar');
+        }
+
+        // Traffic Percent Chart (stacked bar)
+        async function loadTrafficPercentChart(nc) {
+            const response = await fetch(`${API_BASE_URL}/4g-traffic-percent?nc=${nc}`);
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const chartData = {
+                labels: result.data.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'Traffic 4G (%)',
+                        data: result.data.map(d => d.traffic_4g_pct),
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                        borderWidth: 1,
+                    },
+                    {
+                        label: 'Traffic 5G (%)',
+                        data: result.data.map(d => d.traffic_5g_pct),
+                        backgroundColor: colors.secondary,
+                        borderColor: colors.secondary,
+                        borderWidth: 1,
+                    }
+                ]
+            };
+
+            const config = {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM dd'
+                                }
+                            },
+                            stacked: true,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    }
+                }
+            };
+
+            const ctx = document.getElementById('trafficPercentChart').getContext('2d');
+            if (charts['trafficPercentChart']) {
+                charts['trafficPercentChart'].destroy();
+            }
+            charts['trafficPercentChart'] = new Chart(ctx, config);
+        }
+
+        // Create or update chart
+        function createOrUpdateChart(canvasId, data, dualAxis = false, chartType = 'line') {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const config = {
+                type: chartType,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM dd'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (dualAxis) {
+                config.options.scales.y1 = {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                };
+            }
+
+            charts[canvasId] = new Chart(ctx, config);
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+        }
+    </script>
+</body>
+</html>
