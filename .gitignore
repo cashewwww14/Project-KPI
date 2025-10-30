@@ -20,6 +20,17 @@ dashboard_log_*.log
 # Config with sensitive data
 config_local.ini
 .env
+.env.dashboard
+
+# Database
+*.db
+*.sqlite
+*.dump
+backup.sql
+
+# Temporary files
+*.tmp
+*.temp
 
 # IDE
 .vscode/
